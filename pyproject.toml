@@ -10,13 +10,80 @@ readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.10"
 authors = [{ name = "Qu Wang" }]
+keywords = [
+    "audio",
+    "codec",
+    "tokenizer",
+    "vector-quantization",
+    "neural-audio-codec",
+    "audio-language-model",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia :: Sound/Audio",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
 dependencies = [
     "torch>=2.0",
     "numpy>=1.21",
 ]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "pytest-cov>=4.1",
+    "ruff>=0.4",
+    "mypy>=1.8",
+]
+
+[project.urls]
+Homepage = "https://github.com/jamesa94/acoustok"
+Repository = "https://github.com/jamesa94/acoustok"
+Issues = "https://github.com/jamesa94/acoustok/issues"
+Changelog = "https://github.com/jamesa94/acoustok/blob/main/CHANGELOG.md"
+
+[project.scripts]
+acoustok = "acoustok.cli:main"
 
 [tool.hatch.version]
 path = "acoustok/_version.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["acoustok"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "W"]
+ignore = ["B008"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["acoustok"]
+
+[tool.mypy]
+python_version = "3.10"
+ignore_missing_imports = true
+warn_unused_ignores = false
+warn_redundant_casts = true
+no_implicit_optional = true
+files = ["acoustok"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.coverage.run]
+source = ["acoustok"]
+omit = ["acoustok/cli.py"]
+
+[tool.coverage.report]
+exclude_lines = ["pragma: no cover", "if __name__ == .__main__.:", "raise NotImplementedError"]
