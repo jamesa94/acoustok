@@ -115,3 +115,67 @@ class EuclideanCodebook(nn.Module):
             self._expire_dead_codes(flat)
 
         return quantized, codes
+
+
+class VectorQuantizer(nn.Module):
+    """Codebook + optional projections, straight-through and commitment loss.
+
+    Operates on channel-first tensors ``(batch, dim, time)`` so it drops straight
+    into the convolutional codec.  When ``codebook_dim`` differs from ``dim`` the
+    quantization happens in the lower-dimensional projected space (the factorised
+    codebook trick from the DAC paper), which improves codebook usage.
+    """
+
+    def __init__(
+        self,
+        dim: int,
+        codebook_size: int,
+        codebook_dim: int | None = None,
+        decay: float = 0.99,
+        kmeans_init: bool = False,
+        kmeans_iters: int = 10,
+        threshold_ema_dead: float = 2.0,
+        commitment_weight: float = 1.0,
+    ) -> None:
+        super().__init__()
+        codebook_dim = codebook_dim or dim
+        self.commitment_weight = commitment_weight
+        self.codebook_size = codebook_size
+        requires_projection = codebook_dim != dim
+        self.project_in = nn.Linear(dim, codebook_dim) if requires_projection else nn.Identity()
+        self.project_out = nn.Linear(codebook_dim, dim) if requires_projection else nn.Identity()
+        self._codebook = EuclideanCodebook(
+            codebook_dim,
+            codebook_size,
+            kmeans_init=kmeans_init,
+            kmeans_iters=kmeans_iters,
+            decay=decay,
+            threshold_ema_dead=threshold_ema_dead,
+        )
+
+    @property
+    def codebook(self) -> torch.Tensor:
+        return self._codebook.embed
+
+    def encode(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.project_in(x.transpose(1, 2))
+        return self._codebook.encode(x)
+
+    def decode(self, codes: torch.Tensor) -> torch.Tensor:
+        quantized = self.project_out(self._codebook.decode(codes))
+        return quantized.transpose(1, 2)
+
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        x = x.transpose(1, 2)
+        projected = self.project_in(x)
+        quantized, codes = self._codebook(projected)
+
+        loss = x.new_zeros(())
+        if self.training:
+            # Straight-through estimator: forward the codes, backward the identity.
+            quantized = projected + (quantized - projected).detach()
+            if self.commitment_weight > 0:
+                loss = F.mse_loss(projected, quantized.detach()) * self.commitment_weight
+
+        out = self.project_out(quantized).transpose(1, 2)
+        return out, codes, loss
