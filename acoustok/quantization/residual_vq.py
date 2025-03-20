@@ -43,8 +43,16 @@ class ResidualVQ(nn.Module):
             VectorQuantizer(dim, codebook_size, **vq_kwargs) for _ in range(num_quantizers)
         )
 
-    def forward(self, x: torch.Tensor, n_quantizers: int | None = None) -> QuantizeResult:
+    def _resolve_n(self, n_quantizers: int | None) -> int:
         n = self.num_quantizers if n_quantizers is None else n_quantizers
+        if not 1 <= n <= self.num_quantizers:
+            raise ValueError(
+                f"n_quantizers must be in [1, {self.num_quantizers}], got {n_quantizers}"
+            )
+        return n
+
+    def forward(self, x: torch.Tensor, n_quantizers: int | None = None) -> QuantizeResult:
+        n = self._resolve_n(n_quantizers)
         quantized_out = torch.zeros_like(x)
         residual = x
         all_codes: list[torch.Tensor] = []
@@ -63,7 +71,7 @@ class ResidualVQ(nn.Module):
 
     def encode(self, x: torch.Tensor, n_quantizers: int | None = None) -> torch.Tensor:
         """Return discrete codes ``(batch, n_quantizers, time)`` without losses."""
-        n = self.num_quantizers if n_quantizers is None else n_quantizers
+        n = self._resolve_n(n_quantizers)
         residual = x
         all_codes: list[torch.Tensor] = []
         for layer in self.layers[:n]:
