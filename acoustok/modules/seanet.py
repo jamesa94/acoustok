@@ -14,7 +14,7 @@ import torch
 import torch.nn as nn
 
 from .activations import make_activation
-from .conv import SConv1d
+from .conv import SConv1d, SConvTranspose1d
 
 
 def _prod(values: Sequence[int]) -> int:
@@ -78,6 +78,34 @@ class EncoderBlock(nn.Module):
         return self.block(x)
 
 
+class DecoderBlock(nn.Module):
+    """Transposed upsampling convolution followed by residual units."""
+
+    def __init__(
+        self,
+        in_dim: int,
+        out_dim: int,
+        stride: int,
+        dilations: Sequence[int],
+        activation: str,
+        norm: str,
+        pad_mode: str,
+    ) -> None:
+        super().__init__()
+        layers: list[nn.Module] = [
+            make_activation(activation, in_dim),
+            SConvTranspose1d(in_dim, out_dim, kernel_size=2 * stride, stride=stride, norm=norm),
+        ]
+        layers.extend(
+            ResidualUnit(out_dim, d, activation=activation, norm=norm, pad_mode=pad_mode)
+            for d in dilations
+        )
+        self.block = nn.Sequential(*layers)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.block(x)
+
+
 class SEANetEncoder(nn.Module):
     """Waveform ``(B, channels, T)`` -> latent ``(B, dimension, T // hop)``."""
 
@@ -118,6 +146,50 @@ class SEANetEncoder(nn.Module):
         layers.append(
             SConv1d(mult * n_filters, dimension, last_kernel_size, norm=norm, pad_mode=pad_mode)
         )
+        self.model = nn.Sequential(*layers)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.model(x)
+
+
+class SEANetDecoder(nn.Module):
+    """Latent ``(B, dimension, T)`` -> waveform ``(B, channels, T * hop)``."""
+
+    def __init__(
+        self,
+        channels: int = 1,
+        dimension: int = 128,
+        n_filters: int = 32,
+        ratios: Sequence[int] = (8, 5, 4, 2),
+        kernel_size: int = 7,
+        last_kernel_size: int = 7,
+        dilations: Sequence[int] = (1, 3, 9),
+        activation: str = "elu",
+        norm: str = "weight_norm",
+        pad_mode: str = "reflect",
+    ) -> None:
+        super().__init__()
+        self.ratios = list(ratios)
+        self.hop_length = _prod(ratios)
+        mult = 2 ** len(self.ratios)
+        layers: list[nn.Module] = [
+            SConv1d(dimension, mult * n_filters, kernel_size, norm=norm, pad_mode=pad_mode)
+        ]
+        for stride in reversed(self.ratios):
+            layers.append(
+                DecoderBlock(
+                    mult * n_filters,
+                    mult // 2 * n_filters,
+                    stride,
+                    dilations,
+                    activation,
+                    norm,
+                    pad_mode,
+                )
+            )
+            mult //= 2
+        layers.append(make_activation(activation, n_filters))
+        layers.append(SConv1d(n_filters, channels, last_kernel_size, norm=norm, pad_mode=pad_mode))
         self.model = nn.Sequential(*layers)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
