@@ -118,3 +118,14 @@ class Codec(nn.Module):
         result = self.quantizer(emb, self._resolve_n(bandwidth, n_quantizers))
         recon = self.decoder(result.quantized)[..., :length]
         return recon, result.codes, result.loss
+
+    def save(self, path: str) -> None:
+        torch.save({"config": self.config.to_dict(), "state_dict": self.state_dict()}, path)
+
+    @classmethod
+    def from_pretrained(cls, path: str, map_location: str = "cpu") -> Codec:
+        ckpt = torch.load(path, map_location=map_location, weights_only=False)
+        model = cls(CodecConfig.from_dict(ckpt["config"]))
+        model.load_state_dict(ckpt["state_dict"])
+        model.eval()
+        return model
