@@ -71,3 +71,43 @@ The encoder downsamples by `hop_length = prod(ratios)` (320 by default → a 75 
 frame rate at 24 kHz). The residual quantizer stacks `num_quantizers` codebooks,
 each refining the previous level's residual. Full details in
 [docs/architecture.md](docs/architecture.md).
+
+## Bitrate grid (defaults)
+
+| Levels | Bitrate | Token rate |
+| -----: | ------: | ---------: |
+| 1 | 0.75 kbps | 75 tokens/s |
+| 2 | 1.50 kbps | 150 tokens/s |
+| 4 | 3.00 kbps | 300 tokens/s |
+| 8 | 6.00 kbps | 600 tokens/s |
+
+```bash
+acoustok info   # prints the full grid for any config
+```
+
+## Documentation
+
+- [Usage](docs/usage.md) — the everyday API, files, CLI, language-model streams
+- [Architecture](docs/architecture.md) — encoder, decoder, residual quantizer
+- [Design notes](docs/design-notes.md) — why the choices were made
+- [API reference](docs/api-reference.md) — every public call signature
+- [Examples](examples/) — four runnable scripts
+
+## Development
+
+```bash
+pip install -e ".[dev]"
+bash scripts/check.sh    # ruff + mypy + pytest, same as CI
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Acknowledgements
+
+The architecture follows the SoundStream / EnCodec / SEANet line of work on
+neural audio codecs, and the residual-VQ tokenization is the representation used
+by modern audio language models.
+
+## License
+
+[MIT](LICENSE) © Qu Wang
