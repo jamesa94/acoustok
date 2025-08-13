@@ -37,7 +37,9 @@ def count_parameters(module: torch.nn.Module, trainable_only: bool = False) -> i
     return sum(p.numel() for p in params)
 
 
-def pad_to_multiple(x: torch.Tensor, multiple: int, dim: int = -1, value: float = 0.0) -> torch.Tensor:
+def pad_to_multiple(
+    x: torch.Tensor, multiple: int, dim: int = -1, value: float = 0.0
+) -> torch.Tensor:
     """Right-pad ``x`` along ``dim`` so its length is a multiple of ``multiple``."""
     length = x.shape[dim]
     remainder = length % multiple
