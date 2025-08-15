@@ -69,7 +69,8 @@ ignore = ["B008"]
 known-first-party = ["acoustok"]
 
 [tool.mypy]
-python_version = "3.10"
+# No python_version pin: mypy follows the running interpreter (>=3.10 here), so a
+# dependency stub that uses newer syntax under a newer Python is parsed correctly.
 ignore_missing_imports = true
 warn_unused_ignores = false
 warn_redundant_casts = true
