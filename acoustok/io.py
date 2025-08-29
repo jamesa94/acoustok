@@ -36,14 +36,14 @@ def load_audio(
     if sampwidth not in _DTYPES:
         raise ValueError(f"unsupported sample width: {sampwidth} bytes")
 
-    data = np.frombuffer(raw, dtype=_DTYPES[sampwidth]).astype(np.float32)
+    samples = np.frombuffer(raw, dtype=_DTYPES[sampwidth]).astype(np.float32)
     if sampwidth == 1:  # 8-bit PCM is unsigned, centred at 128
-        data = (data - 128.0) / _SCALES[1]
+        samples = (samples - 128.0) / _SCALES[1]
     else:
-        data = data / _SCALES[sampwidth]
-    data = data.reshape(-1, n_channels).T  # (channels, time)
+        samples = samples / _SCALES[sampwidth]
+    channels_first = samples.reshape(-1, n_channels).T  # (channels, time)
 
-    wav = torch.from_numpy(np.ascontiguousarray(data))
+    wav = torch.from_numpy(np.ascontiguousarray(channels_first))
     if mono and n_channels > 1:
         wav = wav.mean(dim=0, keepdim=True)
     if target_sr is not None and target_sr != sr:
