@@ -1,13 +1,15 @@
 """Audio and token file I/O using only the standard library plus NumPy.
 
 WAV reading/writing goes through :mod:`wave` so there is no system dependency on
-libsndfile — in keeping with the offline-by-default goal.
+libsndfile — in keeping with the offline-by-default goal.  Tokens are stored as a
+compressed ``.npz`` archive carrying the codes alongside a little metadata.
 """
 
 from __future__ import annotations
 
 import wave
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import torch
@@ -69,3 +71,22 @@ def save_audio(path: PathLike, wav: torch.Tensor, sample_rate: int) -> None:
         wf.setsampwidth(2)
         wf.setframerate(int(sample_rate))
         wf.writeframes(interleaved.tobytes())
+
+
+def save_tokens(path: PathLike, codes: torch.Tensor, **meta: Any) -> None:
+    """Save discrete codes plus metadata to a compressed ``.npz`` archive."""
+    array = codes.detach().cpu().numpy().astype(np.int64)
+    np.savez_compressed(path, codes=array, **meta)
+
+
+def load_tokens(path: PathLike) -> tuple[torch.Tensor, dict[str, Any]]:
+    """Inverse of :func:`save_tokens`; returns ``(codes, metadata)``."""
+    with np.load(path, allow_pickle=False) as archive:
+        codes = torch.from_numpy(archive["codes"])
+        meta: dict[str, Any] = {}
+        for key in archive.files:
+            if key == "codes":
+                continue
+            value = archive[key]
+            meta[key] = value.item() if value.ndim == 0 else value
+    return codes, meta
