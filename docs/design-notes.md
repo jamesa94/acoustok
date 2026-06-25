@@ -51,3 +51,9 @@ are noise. This is intentional and documented everywhere it matters: the library
 ships the *recipe*, not pretrained checkpoints. The quantization and tokenization
 paths are exact and deterministic regardless of training, which is what the test
 suite pins down.
+
+## Open questions / TODO
+
+- Streaming (causal) convolutions for low-latency inference are not implemented.
+- The reconstruction examples would benefit from a tiny bundled, pretrained
+  toy checkpoint — currently left out to keep the repository weightless.
