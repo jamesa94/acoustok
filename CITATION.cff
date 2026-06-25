@@ -1,0 +1,15 @@
+cff-version: 1.2.0
+message: "If you use acoustok in your research, please cite it."
+title: "acoustok: a neural audio codec and tokenizer for audio language models"
+authors:
+  - family-names: Wang
+    given-names: Qu
+url: "https://github.com/jamesa94/acoustok"
+license: MIT
+version: 0.3.0
+date-released: 2026-06-26
+keywords:
+  - neural audio codec
+  - audio tokenizer
+  - residual vector quantization
+  - audio language model
