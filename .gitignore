@@ -1,0 +1,39 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Test / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.mypy_cache/
+.ruff_cache/
+
+# Checkpoints, audio scratch and generated artifacts
+*.pt
+*.pth
+*.ckpt
+*.npz
+*.wav
+!tests/**/*.wav
+reconstruction.wav
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
