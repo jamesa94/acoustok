@@ -30,3 +30,17 @@ def count_parameters(module: torch.nn.Module, trainable_only: bool = False) -> i
     if trainable_only:
         return sum(p.numel() for p in params if p.requires_grad)
     return sum(p.numel() for p in params)
+
+
+def pad_to_multiple(
+    x: torch.Tensor, multiple: int, dim: int = -1, value: float = 0.0
+) -> torch.Tensor:
+    """Right-pad ``x`` along ``dim`` so its length is a multiple of ``multiple``."""
+    length = x.shape[dim]
+    remainder = length % multiple
+    if remainder == 0:
+        return x
+    pad = multiple - remainder
+    dim = dim % x.dim()
+    pads = [0, 0] * (x.dim() - dim - 1) + [0, pad]
+    return torch.nn.functional.pad(x, pads, value=value)
