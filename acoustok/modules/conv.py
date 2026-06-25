@@ -47,10 +47,22 @@ def pad1d(
     mode: str = "constant",
     value: float = 0.0,
 ) -> torch.Tensor:
-    """Pad the last dimension."""
+    """Pad the last dimension, with a reflect mode that tolerates short inputs."""
     left, right = paddings
     if left < 0 or right < 0:
         raise ValueError(f"padding must be non-negative, got {paddings}")
+    if mode == "reflect":
+        length = x.shape[-1]
+        max_pad = max(left, right)
+        extra = 0
+        if length <= max_pad:
+            # reflect padding requires the input to be longer than the pad; grow
+            # it with zeros first and slice the surplus back off afterwards.
+            extra = max_pad - length + 1
+            x = F.pad(x, (0, extra))
+        padded = F.pad(x, paddings, mode="reflect")
+        end = padded.shape[-1] - extra
+        return padded[..., :end]
     return F.pad(x, paddings, mode=mode, value=value)
 
 
@@ -122,6 +134,8 @@ class SConv1d(nn.Module):
         kernel = (self.kernel_size - 1) * self.dilation + 1
         padding_total = kernel - self.stride
         extra = get_extra_padding_for_conv1d(x, kernel, self.stride, padding_total)
+        # Split the base padding symmetrically (non-causal) and tack the extra
+        # frames onto the right where the tail would otherwise be dropped.
         right = padding_total // 2
         left = padding_total - right
         x = pad1d(x, (left, right + extra), mode=self.pad_mode)
